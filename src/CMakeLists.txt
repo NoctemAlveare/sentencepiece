@@ -79,6 +79,9 @@ endif()
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../third_party)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+set(NLCODEC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/nlcodec)
 
 set(SPM_SRCS
   ${PROTOBUF_LITE_SRCS}
@@ -138,6 +141,7 @@ set(SPM_TRAIN_SRCS
   word_model_trainer.cc
   char_model_trainer.cc
   bpe_model_trainer.cc
+  ${NLCODEC_DIR}/bpe_model_trainer_nlcodec.cc
   sentencepiece_trainer.cc
   pretokenizer_for_training.cc)
 
@@ -147,6 +151,7 @@ set(SPM_TEST_SRCS
   testharness.h
   bpe_model_test.cc
   bpe_model_trainer_test.cc
+  ${NLCODEC_DIR}/bpe_model_trainer_nlcodec_test.cc
   builder_test.cc
   char_model_test.cc
   char_model_trainer_test.cc

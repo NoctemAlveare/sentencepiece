@@ -19,11 +19,15 @@
 #include <unordered_set>
 #include <vector>
 
+#include "nlcodec/bpe_model_trainer_nlcodec.h"
 #include "pretokenizer_for_training.h"
 #include "third_party/absl/container/flat_hash_set.h"
+#include "third_party/absl/flags/flag.h"
 #include "third_party/absl/strings/str_join.h"
 #include "third_party/absl/strings/str_replace.h"
 #include "util.h"
+
+ABSL_DECLARE_FLAG(bool, nlcodec_bpe);
 
 namespace sentencepiece {
 namespace bpe {
@@ -165,6 +169,10 @@ void Trainer::UpdateActiveSymbols() {
 
 util::Status Trainer::Train() {
   RETURN_IF_ERROR(status());
+
+  if (absl::GetFlag(FLAGS_nlcodec_bpe)) {
+    return TrainFast();
+  }
 
   CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
   CHECK_EQ_OR_RETURN(TrainerSpec::BPE, trainer_spec_.model_type());
@@ -309,6 +317,39 @@ util::Status Trainer::Train() {
   }  // end of main loop
 
   // Adds required_chars_
+  for (const auto &w : Sorted(required_chars_)) {
+    const Symbol *symbol = GetCharSymbol(w.first);
+    final_pieces_.emplace_back(symbol->ToString(),
+                               -static_cast<float>(final_pieces_.size()));
+  }
+
+  port::STLDeleteElements(&allocated_);
+
+  return Save();
+}
+
+util::Status Trainer::TrainFast() {
+  CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
+  CHECK_EQ_OR_RETURN(TrainerSpec::BPE, trainer_spec_.model_type());
+
+  RETURN_IF_ERROR(LoadSentences());
+
+  if (trainer_spec_.split_by_whitespace()) {
+    SplitSentencesByWhitespace();
+  }
+
+  const int vocab_size =
+      trainer_spec_.vocab_size() - meta_pieces_.size() - required_chars_.size();
+  CHECK_GE_OR_RETURN(vocab_size, 0);
+  CHECK_OR_RETURN(final_pieces_.empty());
+
+  RETURN_IF_ERROR(
+      RunFastBPEMerges(sentences_, vocab_size, &final_pieces_,
+                       [this](const string_util::UnicodeText &ut) {
+                         return IsValidSentencePiece(ut);
+                       }));
+
+  // Add required_chars_
   for (const auto &w : Sorted(required_chars_)) {
     const Symbol *symbol = GetCharSymbol(w.first);
     final_pieces_.emplace_back(symbol->ToString(),
