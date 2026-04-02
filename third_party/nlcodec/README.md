@@ -108,6 +108,25 @@ Mean sent len (nlcodec): 1056826.50
 
 The two paths produce nearly identical vocabularies (99.5% overlap) and equivalent compression. The small differences come from tie-breaking in pair frequency ordering.
 
+## Tests
+
+Four test cases in `bpe_model_trainer_nlcodec_test.cc` verify correctness:
+
+| Test | What it checks |
+|------|---------------|
+| `NlcodecBPETest.ProducesValidModel` | Trains a 3k-vocab model, verifies encode/decode works |
+| `NlcodecBPETest.VocabSizeMatchesDefault` | Both paths produce identical vocab sizes |
+| `NlcodecBPETest.EncodesDecodesCorrectly` | Encode→decode roundtrip on multiple strings |
+| `NlcodecBPETest.VocabOverlapsWithDefault` | ≥50% vocab overlap between paths (typically 85%+) |
+
+To build and run:
+
+```bash
+mkdir -p build && cd build
+cmake .. -DSPM_BUILD_TEST=ON
+cmake --build . -j$(nproc) --target spm_test
+./src/spm_test    # runs all tests including nlcodec
+```
 
 ## Code Style
 
