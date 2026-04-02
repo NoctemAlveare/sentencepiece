@@ -47,9 +47,10 @@ bash third_party/nlcodec/benchmark.sh -s            # skip encoding comparison (
 bash third_party/nlcodec/benchmark.sh -h            # show all options
 ```
 
-### Results: 200k multilingual sentences (en, de, zh, ar, hi), 32k vocab
+### Results: 200k multilingual sentences (en, de, zh, ar, hi), 32k vocab --> 10x speedup
 
-```
+```bash
+$ bash third_party/nlcodec/benchmark.sh
 ==============================================
   Default:  149.2s
   Nlcodec:  14.4s
@@ -61,6 +62,52 @@ Token counts:  8,346,614 (default) vs 8,347,032 (nlcodec)
 ```
 
 The two paths produce nearly identical vocabularies (99% overlap) and equivalent compression. The small differences come from tie-breaking in pair frequency ordering.
+
+### Results: 1M multilingual sentences (en, de, zh, ar, hi), 64k vocab --> 24x speedup
+
+```bash
+$ bash third_party/nlcodec/benchmark.sh -n 1000000 -v 64000
+
+==============================================
+  BPE Training Benchmark
+  Input: train_1000000.txt (1000000 lines)
+  Vocab: 64000
+==============================================
+
+--- Default BPE ---
+trainer_interface.cc(411) LOG(INFO) Loaded all 950754 sentences
+trainer_interface.cc(594) LOG(INFO) Done! preprocessed 950754 sentences.
+trainer_interface.cc(611) LOG(INFO) Done! 1647091
+Time: 1604650ms (1604.7s)
+
+--- Nlcodec BPE (--nlcodec_bpe) ---
+trainer_interface.cc(411) LOG(INFO) Loaded all 950754 sentences
+trainer_interface.cc(594) LOG(INFO) Done! preprocessed 950754 sentences.
+trainer_interface.cc(611) LOG(INFO) Done! 1647091
+bpe_model_trainer_nlcodec.cc(67) LOG(INFO) nlcodec_bpe: 1647091 word types, 3288 initial chars
+bpe_model_trainer_nlcodec.cc(195) LOG(INFO) nlcodec_bpe: produced 60710 merge pieces
+Time: 66393ms (66.4s)
+
+--- Vocab Comparison ---
+Default vocab: 64000
+Nlcodec vocab: 64000
+Overlap: 63698 / 64000 (99.5%)
+
+--- Encoding Comparison ---
+Default total tokens: 38044696
+Nlcodec total tokens: 38045754
+Mean sent len (default): 1056797.11
+Mean sent len (nlcodec): 1056826.50
+
+==============================================
+  Default:  1604.7s
+  Nlcodec:  66.4s
+  Speedup:  24.2x
+==============================================
+```
+
+The two paths produce nearly identical vocabularies (99.5% overlap) and equivalent compression. The small differences come from tie-breaking in pair frequency ordering.
+
 
 ## Code Style
 
