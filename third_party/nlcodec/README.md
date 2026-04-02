@@ -61,3 +61,7 @@ Token counts:  8,346,614 (default) vs 8,347,032 (nlcodec)
 ```
 
 The two paths produce nearly identical vocabularies (99% overlap) and equivalent compression. The small differences come from tie-breaking in pair frequency ordering.
+
+## Code Style
+
+Code under `third_party/nlcodec/` follows C++ standard library conventions (`snake_case` for methods and variables, trailing return types) rather than the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) used by SentencePiece's `src/` directory. The glue code in `src/bpe_model_trainer.cc` (the `TrainFast()` method and flag declarations) follows Google style to match its surroundings.

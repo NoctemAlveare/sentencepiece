@@ -101,7 +101,11 @@ auto RunFastBPEMerges(
       dirty.erase(dit);
       int64_t c = freq + d;
       if (c > 0) heap.push(pair, c);
-      if (heap.empty()) goto done;
+      if (heap.empty()) {
+        LOG(INFO) << "nlcodec_bpe: produced " << final_pieces->size()
+                  << " merge pieces";
+        return util::OkStatus();
+      }
       std::tie(pair, freq) = heap.pop();
     }
 
@@ -188,7 +192,6 @@ auto RunFastBPEMerges(
     }
   }
 
-done:
   LOG(INFO) << "nlcodec_bpe: produced " << final_pieces->size()
             << " merge pieces";
   return util::OkStatus();

@@ -21,7 +21,7 @@ namespace {
 static constexpr char kTestInputData[] = "wagahaiwa_nekodearu.txt";
 
 // Helper: train BPE and return set of learned pieces (excluding meta tokens).
-static std::set<std::string> TrainAndGetPieces(
+std::set<std::string> TrainAndGetPieces(
     const std::string &input_file, int vocab_size, bool use_nlcodec) {
   const std::string model_prefix =
       util::JoinPath(::testing::TempDir(),
