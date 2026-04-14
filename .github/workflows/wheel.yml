@@ -58,6 +58,12 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: 10.13
           CMAKE_OSX_ARCHITECTURES: arm64;x86_64
 
+      - name: Set up QEMU
+        if: runner.os == 'Linux' && runner.arch != 'ARM64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: riscv64
+
       - name: Install cibuildwheel
         working-directory: python
         run: |
@@ -71,7 +77,7 @@ jobs:
           cp ../data/*.bin src/sentencepiece/package_data
           python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ARCHS_LINUX: auto
+          CIBW_ARCHS_LINUX: auto riscv64
           CIBW_ARCHS_MACOS: x86_64 universal2 arm64
           CIBW_ARCHS_WINDOWS: auto
           CIBW_SKIP: "*-musllinux_*"
