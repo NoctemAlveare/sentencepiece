@@ -15,7 +15,7 @@
 ABSL_DECLARE_FLAG(bool, nlcodec_bpe);
 
 namespace sentencepiece {
-namespace bpe {
+namespace nlcodec {
 namespace {
 
 static constexpr char kTestInputData[] = "wagahaiwa_nekodearu.txt";
@@ -154,5 +154,5 @@ TEST(NlcodecBPETest, VocabOverlapsWithDefault) {
 }
 
 }  // namespace
-}  // namespace bpe
+}  // namespace nlcodec
 }  // namespace sentencepiece

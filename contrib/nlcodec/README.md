@@ -2,7 +2,17 @@
 
 A drop-in replacement for SentencePiece's BPE merge loop that achieves **~10× speedup** by using a max-heap with lazy deletion instead of periodic linear scans.
 
-Enabled via the `--nlcodec_bpe` flag — everything else (sentence loading, normalization, whitespace handling, model serialization) uses SentencePiece's native code paths.
+This code lives under `contrib/nlcodec/` and is an **opt-in** feature: it is only compiled when the CMake option `SPM_NLCODEC_BPE` is set to `ON`. When enabled, the `--nlcodec_bpe` flag becomes available in `spm_train`; everything else (sentence loading, normalization, whitespace handling, model serialization) uses SentencePiece's native code paths.
+
+## Building
+
+```bash
+mkdir -p build && cd build
+cmake .. -DSPM_NLCODEC_BPE=ON
+cmake --build . -j$(nproc)
+```
+
+Without `-DSPM_NLCODEC_BPE=ON`, none of the files in this directory are compiled and the `--nlcodec_bpe` flag is not registered.
 
 ## Algorithm
 
@@ -41,16 +51,16 @@ The output `.model` and `.vocab` files are identical in format to the default pa
 Run the benchmark (auto-downloads multilingual CC-100 data and builds SentencePiece):
 
 ```bash
-bash third_party/nlcodec/benchmark.sh              # 200k lines, 32k vocab (default)
-bash third_party/nlcodec/benchmark.sh -n 1000000   # 1M lines
-bash third_party/nlcodec/benchmark.sh -s            # skip encoding comparison (faster)
-bash third_party/nlcodec/benchmark.sh -h            # show all options
+bash contrib/nlcodec/benchmark.sh              # 200k lines, 32k vocab (default)
+bash contrib/nlcodec/benchmark.sh -n 1000000   # 1M lines
+bash contrib/nlcodec/benchmark.sh -s            # skip encoding comparison (faster)
+bash contrib/nlcodec/benchmark.sh -h            # show all options
 ```
 
 ### Results: 200k multilingual sentences (en, de, zh, ar, hi), 32k vocab --> 10x speedup
 
 ```bash
-$ bash third_party/nlcodec/benchmark.sh
+$ bash contrib/nlcodec/benchmark.sh
 ==============================================
   Default:  149.2s
   Nlcodec:  14.4s
@@ -66,7 +76,7 @@ The two paths produce nearly identical vocabularies (99% overlap) and equivalent
 ### Results: 1M multilingual sentences (en, de, zh, ar, hi), 64k vocab --> 24x speedup
 
 ```bash
-$ bash third_party/nlcodec/benchmark.sh -n 1000000 -v 64000
+$ bash contrib/nlcodec/benchmark.sh -n 1000000 -v 64000
 
 ==============================================
   BPE Training Benchmark
@@ -123,11 +133,11 @@ To build and run:
 
 ```bash
 mkdir -p build && cd build
-cmake .. -DSPM_BUILD_TEST=ON
+cmake .. -DSPM_BUILD_TEST=ON -DSPM_NLCODEC_BPE=ON
 cmake --build . -j$(nproc) --target spm_test
 ./src/spm_test    # runs all tests including nlcodec
 ```
 
 ## Code Style
 
-Code under `third_party/nlcodec/` follows C++ standard library conventions (`snake_case` for methods and variables, trailing return types) rather than the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) used by SentencePiece's `src/` directory. The glue code in `src/bpe_model_trainer.cc` (the `TrainFast()` method and flag declarations) follows Google style to match its surroundings.
+Code under `contrib/nlcodec/` follows C++ standard library conventions (`snake_case` for methods and variables, trailing return types) rather than the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) used by SentencePiece's `src/` directory. The glue code in `src/bpe_model_trainer.cc` (the `TrainFast()` method and flag declarations) follows Google style to match its surroundings.

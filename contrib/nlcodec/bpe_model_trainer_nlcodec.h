@@ -26,7 +26,7 @@
 #include "util.h"
 
 namespace sentencepiece {
-namespace bpe {
+namespace nlcodec {
 
 // ─── Data Structures ─────────────────────────────────────────────────────────
 
@@ -134,7 +134,7 @@ auto RunFastBPEMerges(
     std::function<bool(const string_util::UnicodeText &)> is_valid)
     -> util::Status;
 
-}  // namespace bpe
+}  // namespace nlcodec
 }  // namespace sentencepiece
 
 #endif  // BPE_MODEL_TRAINER_NLCODEC_H_

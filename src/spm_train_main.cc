@@ -24,8 +24,6 @@
 #include "third_party/absl/strings/str_split.h"
 #include "util.h"
 
-ABSL_DECLARE_FLAG(bool, nlcodec_bpe);
-
 using sentencepiece::NormalizerSpec;
 using sentencepiece::TrainerSpec;
 

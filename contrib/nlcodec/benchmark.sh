@@ -59,9 +59,10 @@ done
 
 # ─── Step 1: Build SentencePiece if needed ────────────────────────────────────
 if [[ ! -x "$SPM_TRAIN" ]]; then
-  echo "Building SentencePiece..."
+  echo "Building SentencePiece (with -DSPM_NLCODEC_BPE=ON)..."
   mkdir -p "$BUILD_DIR"
-  (cd "$BUILD_DIR" && cmake "$ROOT_DIR" -DSPM_BUILD_TEST=OFF && cmake --build . -j"$BUILD_JOBS") \
+  (cd "$BUILD_DIR" && cmake "$ROOT_DIR" -DSPM_BUILD_TEST=OFF -DSPM_NLCODEC_BPE=ON \
+    && cmake --build . -j"$BUILD_JOBS") \
     2>&1 | tail -5
   echo ""
 fi

@@ -19,7 +19,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "nlcodec/bpe_model_trainer_nlcodec.h"
 #include "pretokenizer_for_training.h"
 #include "third_party/absl/container/flat_hash_set.h"
 #include "third_party/absl/flags/flag.h"
@@ -27,7 +26,10 @@
 #include "third_party/absl/strings/str_replace.h"
 #include "util.h"
 
+#ifdef SPM_NLCODEC_BPE
+#include "contrib/nlcodec/bpe_model_trainer_nlcodec.h"
 ABSL_DECLARE_FLAG(bool, nlcodec_bpe);
+#endif  // SPM_NLCODEC_BPE
 
 namespace sentencepiece {
 namespace bpe {
@@ -170,9 +172,11 @@ void Trainer::UpdateActiveSymbols() {
 util::Status Trainer::Train() {
   RETURN_IF_ERROR(status());
 
+#ifdef SPM_NLCODEC_BPE
   if (absl::GetFlag(FLAGS_nlcodec_bpe)) {
     return TrainFast();
   }
+#endif  // SPM_NLCODEC_BPE
 
   CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
   CHECK_EQ_OR_RETURN(TrainerSpec::BPE, trainer_spec_.model_type());
@@ -328,6 +332,7 @@ util::Status Trainer::Train() {
   return Save();
 }
 
+#ifdef SPM_NLCODEC_BPE
 util::Status Trainer::TrainFast() {
   CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
   CHECK_EQ_OR_RETURN(TrainerSpec::BPE, trainer_spec_.model_type());
@@ -344,10 +349,10 @@ util::Status Trainer::TrainFast() {
   CHECK_OR_RETURN(final_pieces_.empty());
 
   RETURN_IF_ERROR(
-      RunFastBPEMerges(sentences_, vocab_size, &final_pieces_,
-                       [this](const string_util::UnicodeText &ut) {
-                         return IsValidSentencePiece(ut);
-                       }));
+      nlcodec::RunFastBPEMerges(sentences_, vocab_size, &final_pieces_,
+                                [this](const string_util::UnicodeText &ut) {
+                                  return IsValidSentencePiece(ut);
+                                }));
 
   // Add required_chars_
   for (const auto &w : Sorted(required_chars_)) {
@@ -360,5 +365,6 @@ util::Status Trainer::TrainFast() {
 
   return Save();
 }
+#endif  // SPM_NLCODEC_BPE
 }  // namespace bpe
 }  // namespace sentencepiece

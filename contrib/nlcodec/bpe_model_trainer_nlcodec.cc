@@ -2,7 +2,7 @@
 // Fast BPE merge loop implementation.
 // See bpe_model_trainer_nlcodec.h for algorithm description.
 
-#include "nlcodec/bpe_model_trainer_nlcodec.h"
+#include "contrib/nlcodec/bpe_model_trainer_nlcodec.h"
 
 #include "third_party/absl/container/flat_hash_set.h"
 #include "third_party/absl/flags/flag.h"
@@ -14,7 +14,7 @@ ABSL_FLAG(bool, nlcodec_bpe, false,
           "--model_type=bpe.");
 
 namespace sentencepiece {
-namespace bpe {
+namespace nlcodec {
 
 auto RunFastBPEMerges(
     const TrainerInterface::Sentences &sentences, int vocab_size,
@@ -197,5 +197,5 @@ auto RunFastBPEMerges(
   return util::OkStatus();
 }
 
-}  // namespace bpe
+}  // namespace nlcodec
 }  // namespace sentencepiece
