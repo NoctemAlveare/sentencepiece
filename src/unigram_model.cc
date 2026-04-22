@@ -617,17 +617,19 @@ void Model::BuildTrie(std::vector<std::pair<absl::string_view, int>> *pieces) {
   // only accepts sorted strings.
   sort(pieces->begin(), pieces->end());
 
-  // Makes key/value set for DoubleArrayTrie.
+  // Makes key/value/length set for DoubleArrayTrie.
   std::vector<const char *> key(pieces->size());
+  std::vector<size_t> length(pieces->size());
   std::vector<int> value(pieces->size());
   for (size_t i = 0; i < pieces->size(); ++i) {
     key[i] = (*pieces)[i].first.data();  // sorted piece.
+    length[i] = (*pieces)[i].first.size();
     value[i] = (*pieces)[i].second;      // vocab_id
   }
 
   trie_ = std::make_unique<Darts::DoubleArray>();
-  if (trie_->build(key.size(), const_cast<char **>(&key[0]), nullptr,
-                   &value[0]) != 0) {
+  if (trie_->build(key.size(), const_cast<char **>(&key[0]),
+                   const_cast<size_t *>(&length[0]), &value[0]) != 0) {
     status_ = util::InternalError("cannot build double-array.");
     return;
   }
