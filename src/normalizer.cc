@@ -62,6 +62,11 @@ void Normalizer::Init() {
     // but the number of double array units.
     trie_->set_array(const_cast<char *>(trie_blob.data()),
                      trie_blob.size() / trie_->unit_size());
+    if (!trie_->validate()) {
+      status_ = util::InternalError(
+          "Trie data contains out-of-bounds node references.");
+      return;
+    }
   }
 }
 

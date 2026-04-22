@@ -297,6 +297,11 @@ class DoubleArrayImpl {
   inline value_type traverse(const key_type *key, std::size_t &node_pos,
       std::size_t &key_pos, std::size_t length = 0) const;
 
+  // validate() scans the array of units and verifies that every offset
+  // leads to a position within bounds.  Call after set_array() to reject
+  // malformed data before any search is performed.
+  bool validate() const;
+
  private:
   typedef Details::uchar_type uchar_type;
   typedef Details::id_type id_type;
@@ -428,6 +433,24 @@ int DoubleArrayImpl<A, B, T, C>::save(const char *file_name,
   }
   std::fclose(file);
   return 0;
+}
+
+template <typename A, typename B, typename T, typename C>
+bool DoubleArrayImpl<A, B, T, C>::validate() const {
+  if (size_ == 0) {
+    return true;
+  }
+  for (std::size_t i = 0; i < size_; ++i) {
+    const id_type offset = array_[i].offset();
+    if (offset == 0) {
+      continue;
+    }
+    const std::size_t base = i ^ offset;
+    if ((base | 0xFF) >= size_) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template <typename A, typename B, typename T, typename C>
