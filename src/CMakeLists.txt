@@ -169,6 +169,15 @@ set(SPM_TEST_SRCS
   word_model_trainer_test.cc
   pretokenizer_for_training_test.cc)
 
+if (SPM_NLCODEC_BPE)
+  set(NLCODEC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../contrib/nlcodec)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+  add_compile_definitions(SPM_NLCODEC_BPE)
+  list(APPEND SPM_TRAIN_SRCS ${NLCODEC_DIR}/bpe_model_trainer_nlcodec.cc)
+  list(APPEND SPM_TEST_SRCS ${NLCODEC_DIR}/bpe_model_trainer_nlcodec_test.cc)
+endif()
+
 find_package(Threads REQUIRED)
 
 list(APPEND SPM_LIBS ${PROTOBUF_LITE_LIBRARY} Threads::Threads)
