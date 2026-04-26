@@ -39,6 +39,12 @@ set_property(CACHE SPM_PROTOBUF_PROVIDER PROPERTY STRINGS "internal" "package")
 set(SPM_ABSL_PROVIDER "internal" CACHE STRING "Provider of absl library")
 set_property(CACHE SPM_ABSL_PROVIDER PROPERTY STRINGS "internal" "module" "package")
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+endif()
+
+add_compile_definitions($<$<CONFIG:Release>:NDEBUG>)
+
 if (SPM_ENABLE_SHARED)
  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif() 

@@ -48,4 +48,28 @@
 
 #define QCHECK_OK CHECK_OK
 
+#ifndef NDEBUG
+// debug build
+#define DCHECK(condition) CHECK(condition)
+#define DCHECK_OK(expr) CHECK_OK(expr)
+#define DCHECK_EQ(a, b) CHECK_EQ(a, b)
+#define DCHECK_NE(a, b) CHECK_NE(a, b)
+#define DCHECK_GE(a, b) CHECK_GE(a, b)
+#define DCHECK_LE(a, b) CHECK_LE(a, b)
+#define DCHECK_GT(a, b) CHECK_GT(a, b)
+#define DCHECK_LT(a, b) CHECK_LT(a, b)
+#else
+// release build
+#define DCHECK(condition) \
+  while (false) (void)(condition), std::cerr << ""
+#define DCHECK_OK(expr) \
+  while (false) (void)(expr), std::cerr << ""
+#define DCHECK_EQ(a, b) DCHECK((a) == (b))
+#define DCHECK_NE(a, b) DCHECK((a) != (b))
+#define DCHECK_GE(a, b) DCHECK((a) >= (b))
+#define DCHECK_LE(a, b) DCHECK((a) <= (b))
+#define DCHECK_GT(a, b) DCHECK((a) > (b))
+#define DCHECK_LT(a, b) DCHECK((a) < (b))
+#endif
+
 #endif  // ABSL_LOG_CHECK_H_
