@@ -612,6 +612,33 @@ TEST(UnigramModelTest, SampleEncodeAndScoreTest) {
   }
 }
 
+TEST(UnigramModelTest, SampleEncodeAndScoreSinglePathTest) {
+  // Regression test for segfault when wor=true and include_best=true on an
+  // input that has only a single unique Viterbi path (issue #1198).
+  ModelProto model_proto = MakeBaseModelProto();
+  // Only one piece matches "A", so there is exactly one segmentation path.
+  AddPiece(&model_proto, "A", 0.0);    // 3
+  AddPiece(&model_proto, "B", 0.0);    // 4
+  AddPiece(&model_proto, "AB", 0.5);   // 5
+
+  Model model(model_proto);
+
+  // "A" can only be segmented as ["A"], a single unique path.
+  // Previously this would segfault; now it should return a result with exactly
+  // the best path and no crash.
+  for (int samples = 1; samples <= 3; ++samples) {
+    NBestEncodeResult result =
+        model.SampleEncodeAndScore("A", 1.0, samples, /*wor=*/true,
+                                   /*include_best=*/true);
+    // Must not crash and must return the best-path result.
+    EXPECT_EQ(1, result.size());
+    EXPECT_EQ(1, result[0].first.size());
+    EXPECT_EQ("A", result[0].first[0].first);
+    // Inclusion probability for a deterministic best path is log(1) == 0.
+    EXPECT_NEAR(0.0, result[0].second, 1e-6);
+  }
+}
+
 TEST_P(UnigramModelTest, PieceToIdTest) {
   ModelProto model_proto = MakeBaseModelProto();
 
