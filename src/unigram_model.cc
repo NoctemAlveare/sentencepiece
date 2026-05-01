@@ -793,6 +793,13 @@ NBestEncodeResult Model::SampleEncodeAndScore(absl::string_view normalized,
         nbest_samples.pop_back();
       }
     }
+
+    if (nbest_samples.empty()) {
+      // No additional samples available (e.g. only one unique path exists).
+      // Return the best-path result that was already added above.
+      return results;
+    }
+
     // We use the perturbed score of the k+1th element to calculate the
     // inclusion probability.
     const double kappa = static_cast<double>(nbest_samples.back().second);
