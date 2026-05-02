@@ -160,10 +160,13 @@ void Trainer::UpdateActiveSymbols() {
                                   symbols_cache_.size() * kTopFrequentRatio),
                     symbols.size());
 
-  std::partial_sort(symbols.begin(), symbols.begin() + size, symbols.end(),
-                    [](Symbol *s1, Symbol *s2) { return s1->freq > s2->freq; });
-  LOG(INFO) << "Updating active symbols. max_freq=" << symbols[0]->freq
-            << " min_freq=" << symbols[size - 1]->freq;
+  if (size > 0) {
+    std::partial_sort(
+        symbols.begin(), symbols.begin() + size, symbols.end(),
+        [](Symbol *s1, Symbol *s2) { return s1->freq > s2->freq; });
+    LOG(INFO) << "Updating active symbols. max_freq=" << symbols.front()->freq
+              << " min_freq=" << symbols.back()->freq;
+  }
 
   active_symbols_.clear();
   active_symbols_.insert(symbols.begin(), symbols.begin() + size);

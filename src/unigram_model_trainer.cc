@@ -114,7 +114,6 @@ const TrainerModel::SentencePieces &TrainerModel::GetSentencePieces() const {
 
 void TrainerModel::SetSentencePieces(SentencePieces &&sentencepieces) {
   sentencepieces_ = std::move(sentencepieces);
-  CHECK(!sentencepieces_.empty());
 
   min_score_ = FLT_MAX;
   model_proto_data_.Clear();
@@ -145,7 +144,10 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePieces() {
 // Returns seed sentencepieces for EM training.
 template <typename node_int_type>
 TrainerModel::SentencePieces Trainer::MakeSeedSentencePiecesInternal() {
-  CHECK(!sentences_.empty());
+  if (sentences_.empty()) {
+    return {};
+  }
+
   CHECK(!required_chars_.empty());
 
   // Pretokenizer applied only in training time.
@@ -576,6 +578,8 @@ util::Status Trainer::Train() {
   RETURN_IF_ERROR(LoadSentences());
 
   auto seed_sentencepieces = MakeSeedSentencePieces();
+  CHECK_OR_RETURN(!seed_sentencepieces.empty());
+
   model.SetSentencePieces(std::move(seed_sentencepieces));
 
   if (trainer_spec_.split_by_whitespace()) {
