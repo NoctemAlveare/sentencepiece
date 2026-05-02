@@ -624,7 +624,7 @@ void Model::BuildTrie(std::vector<std::pair<absl::string_view, int>> *pieces) {
   for (size_t i = 0; i < pieces->size(); ++i) {
     key[i] = (*pieces)[i].first.data();  // sorted piece.
     length[i] = (*pieces)[i].first.size();
-    value[i] = (*pieces)[i].second;      // vocab_id
+    value[i] = (*pieces)[i].second;  // vocab_id
   }
 
   trie_ = std::make_unique<Darts::DoubleArray>();
@@ -979,7 +979,7 @@ EncodeResult Model::EncodeOptimized(absl::string_view normalized) const {
       const int ret =
           trie_->traverse(normalized.data(), node_pos, key_pos, key_pos + 1);
       if (ret == -2) break;
-      if (ret >= 0) {
+      if (ret >= 0 && ret < GetPieceSize()) {
         if (IsUnusedInlined(ret)) continue;
         // Update the best path node.
         auto &target_node = best_path_ends_at[key_pos];
