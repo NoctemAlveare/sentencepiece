@@ -112,7 +112,7 @@ const TrainerModel::SentencePieces &TrainerModel::GetSentencePieces() const {
   return sentencepieces_;
 }
 
-void TrainerModel::SetSentencePieces(SentencePieces &&sentencepieces) {
+util::Status TrainerModel::SetSentencePieces(SentencePieces &&sentencepieces) {
   sentencepieces_ = std::move(sentencepieces);
 
   min_score_ = FLT_MAX;
@@ -132,7 +132,7 @@ void TrainerModel::SetSentencePieces(SentencePieces &&sentencepieces) {
   }
 
   BuildTrie(&pieces);
-  CHECK(status().ok());
+  return status();
 }
 
 TrainerModel::SentencePieces Trainer::MakeSeedSentencePieces() {
@@ -580,7 +580,7 @@ util::Status Trainer::Train() {
   auto seed_sentencepieces = MakeSeedSentencePieces();
   CHECK_OR_RETURN(!seed_sentencepieces.empty());
 
-  model.SetSentencePieces(std::move(seed_sentencepieces));
+  RETURN_IF_ERROR(model.SetSentencePieces(std::move(seed_sentencepieces)));
 
   if (trainer_spec_.split_by_whitespace()) {
     SplitSentencesByWhitespace();
@@ -600,7 +600,7 @@ util::Status Trainer::Train() {
 
       // Executes M step.
       auto new_sentencepieces = RunMStep(model, expected);
-      model.SetSentencePieces(std::move(new_sentencepieces));
+      RETURN_IF_ERROR(model.SetSentencePieces(std::move(new_sentencepieces)));
 
       LOG(INFO) << "EM sub_iter=" << iter << " size=" << model.GetPieceSize()
                 << " obj=" << objective << " num_tokens=" << num_tokens
@@ -616,7 +616,7 @@ util::Status Trainer::Train() {
 
     // Prunes pieces.
     auto new_sentencepieces = PruneSentencePieces(model);
-    model.SetSentencePieces(std::move(new_sentencepieces));
+    RETURN_IF_ERROR(model.SetSentencePieces(std::move(new_sentencepieces)));
   }  // end of EM iteration
 
   // Finally, adjusts the size of sentencepices to be |vocab_size|.
