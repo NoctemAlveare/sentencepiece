@@ -501,7 +501,7 @@ std::vector<Lattice::LatticePathWithScore> Lattice::NBest(size_t nbest_size,
         agenda.pop();
       }
       agenda = std::move(new_agenda);
-      hypothesis_allocator.swap(new_allocator);
+      hypothesis_allocator = std::move(new_allocator);
     }
   }
 
