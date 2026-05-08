@@ -10,6 +10,7 @@
 #define SWIG_VERSION 0x040400
 #define SWIGPYTHON
 #define SWIG_PYTHON_DIRECTOR_NO_VTABLE
+#define SWIGPYTHON_NOGIL
 
 #define SWIG_name    "_sentencepiece"
 /* -----------------------------------------------------------------------------
@@ -11041,11 +11042,6 @@ SWIGINTERN int SWIG_mod_exec(PyObject *m) {
 #endif
   
   SWIG_InstallConstants(d,swig_const_table);
-  
-  
-#ifdef Py_GIL_DISABLED
-  PyUnstable_Module_SetGIL(m, Py_MOD_GIL_NOT_USED);
-#endif
   
   return 0;
 }
