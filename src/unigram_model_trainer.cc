@@ -67,39 +67,64 @@ void ToLogProb(IT begin, IT end) {
   }
 }
 
-template <class T>
 class BoundedPriorityQueue {
  public:
-  explicit BoundedPriorityQueue(size_t size) : size_(size) {}
-  ~BoundedPriorityQueue() = default;
+  explicit BoundedPriorityQueue(size_t size) : max_capacity_(size) {}
 
-  void push(T elem, int64_t score) {
-    if (queue_.size() > 4 * size_) resize();
-    if (sorted && queue_.size() >= size_ && queue_[size_ - 1].second > score)
-      return;
-    queue_.emplace_back(elem, score);
+  void Push(const std::string &key, int64_t score) {
+    auto &current_score = data_[key];  // initializes with 0 if not exists.
+    if (score > current_score) {
+      current_score = score;
+    }
+    // Run GC when the size exceeds 8 * max_capacity_
+    if (data_.size() > 8 * max_capacity_) {
+      Gc();
+    }
   }
 
-  const std::vector<std::pair<T, int64_t>> &get() {
-    resize();
-    return queue_;
+  std::vector<std::pair<std::string, int64_t>> Get() {
+    std::vector<std::pair<std::string, int64_t>> results;
+    results.reserve(data_.size());
+    for (auto &it : data_) results.emplace_back(std::move(it));
+    data_.clear();
+
+    Sort(results);
+
+    if (results.size() > max_capacity_) {
+      results.resize(max_capacity_);
+    }
+
+    return results;
   }
 
  private:
-  void resize() {
-    std::sort(queue_.begin(), queue_.end(), [](const auto &p1, const auto &p2) {
-      return (p1.second > p2.second ||
-              (p1.second == p2.second && p1.first < p2.first));
-    });
-    sorted = true;
-    if (queue_.size() > size_) queue_.resize(size_);
+  void Gc() {
+    LOG(INFO) << "Running GC to shrink the candidate pieces";
+    std::vector<std::pair<std::string, int64_t>> tmp;
+    tmp.reserve(data_.size());
+    for (auto &it : data_) tmp.emplace_back(std::move(it));
+    Sort(tmp);
+    data_.clear();
+
+    const size_t keep = std::min(tmp.size(), max_capacity_);
+    for (size_t i = 0; i < keep; ++i) {
+      data_.emplace(std::move(tmp[i].first), tmp[i].second);
+    }
   }
 
-  bool sorted = false;
-  size_t size_ = 0;
-  std::vector<std::pair<T, int64_t>> queue_;
-};
+  void Sort(std::vector<std::pair<std::string, int64_t>> &agenda) {
+    std::sort(
+        agenda.begin(), agenda.end(), [](const auto &lhs, const auto &rhs) {
+          // Sort by score, length, and dictionary order.
+          return std::forward_as_tuple(rhs.second, rhs.first.size(),
+                                       lhs.first) <
+                 std::forward_as_tuple(lhs.second, lhs.first.size(), rhs.first);
+        });
+  }
 
+  size_t max_capacity_;
+  std::unordered_map<std::string, int64_t> data_;
+};
 }  // namespace
 
 TrainerModel::TrainerModel(const TrainerSpec &trainer_spec,
@@ -269,8 +294,19 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePiecesInternal() {
                       D.begin(), n, kAlphabetSize, node_num));
 
     LOG(INFO) << "Extracting frequent sub strings... node_num=" << node_num;
-    BoundedPriorityQueue<node_int_type> queue(
+
+    BoundedPriorityQueue queue(
         static_cast<size_t>(trainer_spec_.seed_sentencepiece_size()));
+
+    // split candidate frequent piece into the actual piece.
+    auto split_into_pieces =
+        [&](absl::string_view w) -> std::vector<absl::string_view> {
+      if (trainer_spec_.split_by_whitespace()) {
+        return SplitIntoWords(w, trainer_spec_.treat_whitespace_as_suffix(),
+                              trainer_spec_.allow_whitespace_only_pieces());
+      }
+      return {w};
+    };
 
     for (node_int_type i = 0; i < node_num; ++i) {
       const node_int_type offset = SA[L[i]];
@@ -280,32 +316,31 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePiecesInternal() {
       }
       const char32 *begin = &array[offset];
       const char32 *end = &array[offset + len];
-      // Skips if a substring contains a sentence boundary.
-      if (std::find(begin, end, kSentenceBoundary) != end) {
-        continue;
-      }
-      const UnicodeText uw(begin, end);
-      if (!IsValidSentencePiece(uw)) {
-        continue;
-      }
+      const uint64_t freq = R[i] - L[i];
 
-      // character-wise coverage is the default score.
-      const node_int_type freq = R[i] - L[i];
-      const node_int_type score = freq * len;
-      queue.push(i, score);
+      // Split by kSentenceBoundary, as some frequent phrases may cross
+      // the sentence boundary.
+      while (begin < end) {
+        const char32 *delim = std::find(begin, end, kSentenceBoundary);
+        const UnicodeText uw(begin, delim);
+        begin = delim + 1;
+        if (uw.size() <= 1) continue;
+
+        const std::string w = string_util::UnicodeTextToUTF8(uw);
+        for (absl::string_view piece : split_into_pieces(w)) {
+          const UnicodeText pw = string_util::UTF8ToUnicodeText(piece);
+          if (pw.size() <= 1 || !IsValidSentencePiece(pw)) {
+            continue;
+          }
+          const uint64_t score = freq * pw.size();
+          queue.Push(std::string(piece), score);
+        }
+      }
     }
 
-    for (const auto &p : queue.get()) {
-      const node_int_type offset = SA[L[p.first]];
-      const node_int_type len = D[p.first];
-      CHECK_GT(len, 0);
-      const char32 *begin = &array[offset];
-      const char32 *end = &array[offset + len];
-      const UnicodeText uw(begin, end);
-      const std::string w = string_util::UnicodeTextToUTF8(uw);
-      CHECK(IsValidSentencePiece(uw));  // just in case.
+    for (auto &[w, score] : queue.Get()) {
       CHECK(!port::ContainsKey(all_chars, w));
-      seed_sentencepieces.emplace_back(w, p.second);
+      seed_sentencepieces.emplace_back(std::move(w), score);
     }
   }
 
