@@ -148,7 +148,7 @@ util::Status TrainerModel::SetSentencePieces(SentencePieces &&sentencepieces) {
   for (size_t i = 0; i < sentencepieces_.size(); ++i) {
     const absl::string_view w = sentencepieces_[i].first;  // piece
     const float score = sentencepieces_[i].second;         // score.
-    CHECK(!std::isnan(score));
+    CHECK_OR_RETURN(!std::isnan(score));
     pieces.emplace_back(w, i);
     min_score_ = std::min(min_score_, score);
     auto *piece = model_proto_data_.add_pieces();
@@ -169,11 +169,9 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePieces() {
 // Returns seed sentencepieces for EM training.
 template <typename node_int_type>
 TrainerModel::SentencePieces Trainer::MakeSeedSentencePiecesInternal() {
-  if (sentences_.empty()) {
+  if (sentences_.empty() || required_chars_.empty()) {
     return {};
   }
-
-  CHECK(!required_chars_.empty());
 
   // Pretokenizer applied only in training time.
   // Pretokenizer is used as a constraint of piece extractions.
@@ -248,10 +246,15 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePiecesInternal() {
     int skipped_sentencepieces = 0;
     while (seed_sentencepieces_file->ReadLine(&line)) {
       const std::vector<std::string> fields = absl::StrSplit(line, '\t');
-      CHECK_GE(fields.size(), 2);
+      if (fields.size() < 2) {
+        LOG(ERROR) << "Format error: must be <piece> <tab> <freq>";
+        return {};
+      }
       const auto &seed_sentencepiece = fields[0];
-      CHECK(absl::SimpleAtoi(fields[1], &freq))
-          << "Could not parse the frequency; line: " << line;
+      if (!absl::SimpleAtoi(fields[1], &freq)) {
+        LOG(ERROR) << "Could not parse the frequency; line: " << line;
+        return {};
+      }
       const UnicodeText uw = string_util::UTF8ToUnicodeText(seed_sentencepiece);
       if (!IsValidSentencePiece(uw)) {
         ++skipped_sentencepieces;
@@ -611,6 +614,7 @@ util::Status Trainer::Train() {
 
   RETURN_IF_ERROR(model.status());
   RETURN_IF_ERROR(LoadSentences());
+  CHECK_OR_RETURN(!required_chars_.empty());
 
   auto seed_sentencepieces = MakeSeedSentencePieces();
   CHECK_OR_RETURN(!seed_sentencepieces.empty());
