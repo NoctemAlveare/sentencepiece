@@ -69,8 +69,8 @@ void ConvertToUnicodeSpansInternal(SentencePieceText *spt) {
   int ulen = 0;
   while (!str.empty()) {
     const size_t mblen =
-        std::min(str.size(),
-                 static_cast<size_t>(std::max<int>(1, string_util::OneCharLen(str.data()))));
+        std::min(str.size(), static_cast<size_t>(std::max<int>(
+                                 1, string_util::OneCharLen(str.data()))));
     for (int i = prev; i < prev + mblen; ++i) {
       utf8_to_unicode[i] = ulen;
     }
@@ -614,8 +614,8 @@ util::Status SentencePieceProcessor::PopulateSentencePieceText(
         // since known pieces never consist of unknown characters.
         if (is_prev_unk && is_unk) {
           auto *sp = spt->mutable_pieces(spt->pieces_size() - 1);
-          sp->set_piece(sp->piece() + std::string(w));
-          sp->set_surface(sp->surface() + std::string(surface));
+          sp->set_piece(absl::StrCat(sp->piece(), w));
+          sp->set_surface(absl::StrCat(sp->surface(), surface));
           sp->set_end(orig_end);
         } else {
           auto *sp = spt->add_pieces();
@@ -828,7 +828,7 @@ util::Status SentencePieceProcessor::Decode(
   std::string *text = spt->mutable_text();
   auto SetSurface = [&](int index, absl::string_view surface) {
     auto *sp = spt->mutable_pieces(index);
-    sp->set_surface(std::string(surface));
+    sp->set_surface(surface.data(), surface.size());
     sp->set_begin(text->size());
     sp->set_end(text->size() + surface.size());
     absl::StrAppend(text, surface);

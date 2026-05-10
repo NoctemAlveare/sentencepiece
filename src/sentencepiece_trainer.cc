@@ -325,7 +325,7 @@ util::Status SentencePieceNormalizer::LoadFromRuleTSV(
     absl::string_view filename) {
   auto model_proto = std::make_unique<ModelProto>();
   auto *spec = model_proto->mutable_normalizer_spec();
-  spec->set_normalization_rule_tsv(std::string(filename));
+  spec->set_normalization_rule_tsv(filename.data(), filename.size());
   RETURN_IF_ERROR(SentencePieceTrainer::PopulateNormalizerSpec(spec));
   return Load(std::move(model_proto));
 }
@@ -333,7 +333,7 @@ util::Status SentencePieceNormalizer::LoadFromRuleTSV(
 util::Status SentencePieceNormalizer::LoadFromRuleName(absl::string_view name) {
   auto model_proto = std::make_unique<ModelProto>();
   auto *spec = model_proto->mutable_normalizer_spec();
-  spec->set_name(std::string(name));
+  spec->set_name(name.data(), name.size());
   RETURN_IF_ERROR(SentencePieceTrainer::PopulateNormalizerSpec(spec));
   return Load(std::move(model_proto));
 }
@@ -373,10 +373,9 @@ void ConvertToUnicodeAlignment(absl::string_view orig, absl::string_view norm,
     size_t prev = 0;
     int ulen = 0;
     while (!str.empty()) {
-      const size_t mblen = std::min(
-          str.size(),
-          static_cast<size_t>(
-              std::max<int>(1, string_util::OneCharLen(str.data()))));
+      const size_t mblen =
+          std::min(str.size(), static_cast<size_t>(std::max<int>(
+                                   1, string_util::OneCharLen(str.data()))));
       for (int i = prev; i < prev + mblen; ++i) {
         utf8_to_unicode[i] = ulen;
       }
