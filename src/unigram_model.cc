@@ -58,6 +58,20 @@ inline float LogSumExp(float x, float y, bool init_mode) {
   }
 }
 
+// Calculates the score of user defined symbol.
+//
+// This scoring function prioritizes longer tokens when the total character
+// length is the same (Maximal Matching). By using (length - 1),
+// we effectively apply a "segmentation penalty" to each additional token.
+// Since normal scores are log probabilities (where score <= 0), the
+// user-defined score will always be selected.
+//
+// Examples (Total length = 4):
+// - Single token ["abcd"] (len:4)        => 0.1 * (4 - 1) = 0.3  (Highest)
+// - Two tokens   ["abc", "d"] (len:3,1)  => 0.2 + 0.0     = 0.2
+// - Four tokens  ["a","b","c","d"]       => 0.0 + 0.0...  = 0.0  (Lowest)
+inline float GetUserDefinedScore(int length) { return 0.1 * (length - 1); }
+
 // Returns a sample from a standard Gumbel distribution.
 // If U  ~ U[0, 1], -log(-log U) ~ G(0,1)
 inline float Gumbel() {
@@ -580,7 +594,7 @@ void Model::PopulateNodes(Lattice *lattice) const {
       Lattice::Node *node = lattice->Insert(begin_pos, length);
       node->id = id;  // the value of Trie stores vocab_id.
       // User defined symbol receives extra bonus to always be selected.
-      node->score = IsUserDefinedInlined(id) ? (length * max_score_ - 0.1)
+      node->score = IsUserDefinedInlined(id) ? GetUserDefinedScore(length)
                                              : GetScoreInlined(id);
       if (!has_single_node && node->length == 1) {
         has_single_node = true;
@@ -657,11 +671,9 @@ Model::Model(const ModelProto &model_proto) {
   InitializePieces();
 
   min_score_ = FLT_MAX;
-  max_score_ = FLT_MIN;
   for (const auto &sp : model_proto_->pieces()) {
     if (sp.type() == ModelProto::SentencePiece::NORMAL) {
       min_score_ = std::min(min_score_, sp.score());
-      max_score_ = std::max(max_score_, sp.score());
     }
   }
 
@@ -876,7 +888,7 @@ bool Model::VerifyOutputsEquivalent(absl::string_view expected,
           } else {
             const int length = p.size();
             total_score += IsUserDefinedInlined(id)
-                               ? (length * max_score_ - 0.1)
+                               ? GetUserDefinedScore(length)
                                : GetScoreInlined(id);
           }
         }
@@ -986,7 +998,7 @@ EncodeResult Model::EncodeOptimized(absl::string_view normalized) const {
         const auto length = (key_pos - starts_at);
         // User defined symbol receives extra bonus to always be selected.
         const auto score = IsUserDefinedInlined(ret)
-                               ? (length * max_score_ - 0.1)
+                               ? GetUserDefinedScore(length)
                                : GetScoreInlined(ret);
         const auto candidate_best_path_score =
             score + best_path_score_till_here;

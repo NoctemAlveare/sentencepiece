@@ -617,9 +617,9 @@ TEST(UnigramModelTest, SampleEncodeAndScoreSinglePathTest) {
   // input that has only a single unique Viterbi path (issue #1198).
   ModelProto model_proto = MakeBaseModelProto();
   // Only one piece matches "A", so there is exactly one segmentation path.
-  AddPiece(&model_proto, "A", 0.0);    // 3
-  AddPiece(&model_proto, "B", 0.0);    // 4
-  AddPiece(&model_proto, "AB", 0.5);   // 5
+  AddPiece(&model_proto, "A", 0.0);   // 3
+  AddPiece(&model_proto, "B", 0.0);   // 4
+  AddPiece(&model_proto, "AB", 0.5);  // 5
 
   Model model(model_proto);
 
@@ -654,7 +654,6 @@ TEST_P(UnigramModelTest, PieceToIdTest) {
             model.model_proto().SerializeAsString());
 
   EXPECT_NEAR(0.1, model.min_score(), 0.001);
-  EXPECT_NEAR(0.4, model.max_score(), 0.001);
 
   EXPECT_EQ(0, model.PieceToId("<unk>"));
   EXPECT_EQ(1, model.PieceToId("<s>"));

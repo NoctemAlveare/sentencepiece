@@ -37,9 +37,9 @@ class Lattice {
 
   struct Node {
     absl::string_view piece;  // Sentence piece representation.
-    uint32_t pos;               // Unicode position in the sentence.
-    uint32_t length;            // Unicode length, not UT8 byte.
-    uint32_t node_id;           // unique id in the current lattice.
+    uint32_t pos;             // Unicode position in the sentence.
+    uint32_t length;          // Unicode length, not UT8 byte.
+    uint32_t node_id;         // unique id in the current lattice.
     int id;                   // vocab id. (maybe -1 for UNK)
     float score;              // logprob of this sentencepiece.
     float backtrace_score;    // backtrace info used in Viterbi.
@@ -157,10 +157,6 @@ class Model : public ModelInterface {
   // min_score() - 10 is used for the cost of unknown sentence.
   float min_score() const { return min_score_; }
 
-  // Returns the maximum score in sentence pieces.
-  // max_score() is used for the cost of user defined symbols.
-  float max_score() const { return max_score_; }
-
   // Populates all sentence pieces to the |lattice|.
   // After calling this function, lattice.Viterbi() returns the
   // best segmentation.
@@ -201,7 +197,6 @@ class Model : public ModelInterface {
   EncodeResult EncodeOptimized(absl::string_view normalized) const;
 
   float min_score_ = 0.0;
-  float max_score_ = 0.0;
   std::unique_ptr<Darts::DoubleArray> trie_;
 
   // Maximum size of the return value of Trie, which corresponds
