@@ -66,6 +66,7 @@ def is_gil_disabled():
 
 
 def find_abseil_lib(search_root):
+  print('## searching abseil {}'.format(search_root))
   absl_libs = []
   ext = '.lib' if os.name == 'nt' else '.a'
   for root, dirs, files in os.walk(search_root):
@@ -76,6 +77,7 @@ def find_abseil_lib(search_root):
         full_path = os.path.join(root, file)
         absl_libs.append(full_path)
 
+  print('## absl_libs={}'.format(' '.join(absl_libs)))
   return absl_libs
 
 
@@ -95,7 +97,7 @@ def get_cflags_and_libs(root):
   return cflags, libs
 
 
-class build_ext(_build_ext):
+class build_ext_unix(_build_ext):
   """Override build_extension to run cmake."""
 
   def build_extension(self, ext):
@@ -137,6 +139,64 @@ class build_ext(_build_ext):
 
     libs.append('-Wl,--gc-sections')
     libs.append('-Wl,--version-script=exports.txt')
+
+    print('## cflags={}'.format(' '.join(cflags)))
+    print('## libs={}'.format(' '.join(libs)))
+    ext.extra_compile_args = cflags
+    ext.extra_link_args = libs
+    _build_ext.build_extension(self, ext)
+
+
+class build_ext_win(_build_ext):
+  """Override build_extension to run cmake."""
+
+  def build_extension(self, ext):
+    # Must pre-install sentencepice into build directory.
+    arch = get_win_arch()
+
+    if not os.path.exists('..\\build_{}\\root\\lib'.format(arch)):
+      # build library locally with cmake and vc++.
+      cmake_arch = 'Win32'
+      if arch == 'amd64':
+        cmake_arch = 'x64'
+      elif arch == 'arm64':
+        cmake_arch = 'ARM64'
+
+      subprocess.check_call([
+          'cmake',
+          'sentencepiece',
+          '-A',
+          cmake_arch,
+          '-B',
+          'build_{}'.format(arch),
+          '-DSPM_ENABLE_SHARED=OFF',
+          '-DSPM_ABSL_PROVIDER=module',
+          '-DCMAKE_SHARED_LINKER_FLAGS="/OPT:REF /OPT:ICF /LTCG"',
+          '-DCMAKE_INSTALL_PREFIX=build{}\\root'.format(arch),
+      ])
+      subprocess.check_call([
+          'cmake',
+          '--build',
+          'build_{}'.format(arch),
+          '--config',
+          'Release',
+          '--target',
+          'install',
+          '--parallel',
+          '8',
+      ])
+
+    cflags = ['/std:c++17', '/I..\\build_{}\\root\\include'.format(arch)]
+    libs = [
+        '..\\build_{}\\root\\lib\\sentencepiece.lib'.format(arch),
+        '..\\build_{}\\root\\lib\\sentencepiece_train.lib'.format(arch),
+    ]
+    libs.extend(find_abseil_lib('.\\build_{}\\third_party'.format(arch)))
+
+    # on Windows, GIL flag is not set automatically.
+    # https://docs.python.org/3/howto/free-threading-python.html
+    if is_gil_disabled():
+      cflags.append('/DPy_GIL_DISABLED')
 
     print('## cflags={}'.format(' '.join(cflags)))
     print('## libs={}'.format(' '.join(libs)))
@@ -189,78 +249,16 @@ def get_win_arch():
   return arch
 
 
+SENTENCEPIECE_EXT = Extension(
+    'sentencepiece._sentencepiece',
+    sources=['src/sentencepiece/sentencepiece_wrap.cxx'],
+)
+
+
 if os.name == 'nt':
-  # Must pre-install sentencepice into build directory.
-  arch = get_win_arch()
-  if os.path.exists('..\\build_{}\\root\\lib'.format(arch)):
-    cflags = ['/std:c++17', '/I..\\build_{}\\root\\include'.format(arch)]
-    libs = [
-        '..\\build_{}\\root\\lib\\sentencepiece.lib'.format(arch),
-        '..\\build_{}\\root\\lib\\sentencepiece_train.lib'.format(arch),
-    ]
-    libs.extend(find_abseil_lib('.\\build_{}\\third_party'.format(arch)))
-  elif os.path.exists('..\\build\\root\\lib'):
-    cflags = ['/std:c++17', '/I..\\build\\root\\include']
-    libs = [
-        '..\\build\\root\\lib\\sentencepiece.lib',
-        '..\\build\\root\\lib\\sentencepiece_train.lib',
-    ]
-    libs.extend(find_abseil_lib('.\\build\\third_party'))
-  else:
-    # build library locally with cmake and vc++.
-    cmake_arch = 'Win32'
-    if arch == 'amd64':
-      cmake_arch = 'x64'
-    elif arch == 'arm64':
-      cmake_arch = 'ARM64'
-    subprocess.check_call([
-        'cmake',
-        'sentencepiece',
-        '-A',
-        cmake_arch,
-        '-B',
-        'build',
-        '-DSPM_ENABLE_SHARED=OFF',
-        '-DSPM_ABSL_PROVIDER=module',
-        '-DCMAKE_SHARED_LINKER_FLAGS="/OPT:REF /OPT:ICF /LTCG"',
-        '-DCMAKE_INSTALL_PREFIX=build\\root',
-    ])
-    subprocess.check_call([
-        'cmake',
-        '--build',
-        'build',
-        '--config',
-        'Release',
-        '--target',
-        'install',
-        '--parallel',
-        '8',
-    ])
-    cflags = ['/std:c++17', '/I.\\build\\root\\include']
-    libs = [
-        '.\\build\\root\\lib\\sentencepiece.lib',
-        '.\\build\\root\\lib\\sentencepiece_train.lib',
-    ]
-    libs.extend(find_abseil_lib('.\\build\\third_party'))
-
-  # on Windows, GIL flag is not set automatically.
-  # https://docs.python.org/3/howto/free-threading-python.html
-  if is_gil_disabled():
-    cflags.append('/DPy_GIL_DISABLED')
-
-  SENTENCEPIECE_EXT = Extension(
-      'sentencepiece._sentencepiece',
-      sources=['src/sentencepiece/sentencepiece_wrap.cxx'],
-      extra_compile_args=cflags,
-      extra_link_args=libs,
-  )
-  cmdclass = {}
+  cmdclass = {'build_ext': build_ext_win}
 else:
-  SENTENCEPIECE_EXT = Extension(
-      'sentencepiece._sentencepiece',
-      sources=['src/sentencepiece/sentencepiece_wrap.cxx'],
-  )
-  cmdclass = {'build_ext': build_ext}
+  cmdclass = {'build_ext': build_ext_unix}
 
 if __name__ == '__main__':
   copy_package_data()
