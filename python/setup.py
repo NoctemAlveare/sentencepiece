@@ -28,37 +28,9 @@ from setuptools.command.build_ext import build_ext as _build_ext
 sys.path.append(os.path.join('.', 'test'))
 
 
-def long_description():
-  with codecs.open('README.md', 'r', 'utf-8') as f:
-    long_description = f.read()
-  return long_description
-
-
 with open('src/sentencepiece/_version.py') as f:
   line = f.readline().strip()
   __version__ = line.split('=')[1].strip().strip("'")
-
-
-def run_pkg_config(section, pkg_config_path=None):
-  try:
-    cmd = 'pkg-config sentencepiece --{}'.format(section)
-    if pkg_config_path:
-      cmd = 'env PKG_CONFIG_PATH={} {}'.format(pkg_config_path, cmd)
-    output = subprocess.check_output(cmd, shell=True)
-    if sys.version_info >= (3, 0, 0):
-      output = output.decode('utf-8')
-  except subprocess.CalledProcessError:
-    sys.stderr.write('Failed to find sentencepiece pkg-config\n')
-    sys.exit(1)
-  return output.strip().split()
-
-
-def is_sentencepiece_installed():
-  try:
-    subprocess.check_call('pkg-config sentencepiece --libs', shell=True)
-    return True
-  except subprocess.CalledProcessError:
-    return False
 
 
 def is_gil_disabled():
@@ -84,12 +56,12 @@ def find_abseil_lib(search_root):
 def get_cflags_and_libs(root):
   cflags = ['-std=c++17', '-I' + os.path.join(root, 'include')]
   libs = []
-  if os.path.exists(os.path.join(root, 'lib/pkgconfig/sentencepiece.pc')):
+  if os.path.exists(os.path.join(root, 'lib/libsentencepiece.a')):
     libs = [
         os.path.join(root, 'lib/libsentencepiece.a'),
         os.path.join(root, 'lib/libsentencepiece_train.a'),
     ]
-  elif os.path.exists(os.path.join(root, 'lib64/pkgconfig/sentencepiece.pc')):
+  elif os.path.exists(os.path.join(root, 'lib64/libsentencepiece.a')):
     libs = [
         os.path.join(root, 'lib64/libsentencepiece.a'),
         os.path.join(root, 'lib64/libsentencepiece_train.a'),
@@ -102,18 +74,16 @@ class build_ext_unix(_build_ext):
 
   def build_extension(self, ext):
     cflags, libs = get_cflags_and_libs('../build/root')
+    abseil_libs = find_abseil_lib('../build/third_party')
 
     if len(libs) == 0:
-      if is_sentencepiece_installed():
-        cflags = cflags + run_pkg_config('cflags')
-        libs = run_pkg_config('libs')
-      else:
-        subprocess.check_call(['./build_bundled.sh', __version__])
-        cflags, libs = get_cflags_and_libs('./build/root')
+      subprocess.check_call(['./build_bundled.sh', __version__])
+      cflags, libs = get_cflags_and_libs('./build/root')
+      abseil_libs = find_abseil_lib('./build/third_party')
 
     # explictly link abseil libraries.
     libs.append('-Wl,--start-group')
-    libs.extend(find_abseil_lib('./build'))
+    libs.extend(abseil_libs)
     libs.append('-Wl,--end-group')
 
     # Fix compile on some versions of Mac OSX
@@ -154,7 +124,21 @@ class build_ext_win(_build_ext):
     # Must pre-install sentencepice into build directory.
     arch = get_win_arch()
 
-    if not os.path.exists('..\\build_{}\\root\\lib'.format(arch)):
+    if os.path.exists('..\\build_{}\\root\\lib'.format(arch)):
+      cflags = ['/std:c++17', '/I..\\build_{}\\root\\include'.format(arch)]
+      libs = [
+          '..\\build_{}\\root\\lib\\sentencepiece.lib'.format(arch),
+          '..\\build_{}\\root\\lib\\sentencepiece_train.lib'.format(arch),
+      ]
+      libs.extend(find_abseil_lib('..\\build_{}\\third_party'.format(arch)))
+    if os.path.exists('..\\build\\root\\lib'):
+      cflags = ['/std:c++17', '/I..\\build\\root\\include']
+      libs = [
+          '..\\build\\root\\lib\\sentencepiece.lib',
+          '..\\build\\root\\lib\\sentencepiece_train.lib',
+      ]
+      libs.extend(find_abseil_lib('..\\build\\third_party'))
+    else:
       # build library locally with cmake and vc++.
       cmake_arch = 'Win32'
       if arch == 'amd64':
@@ -168,16 +152,16 @@ class build_ext_win(_build_ext):
           '-A',
           cmake_arch,
           '-B',
-          'build_{}'.format(arch),
+          'build',
           '-DSPM_ENABLE_SHARED=OFF',
           '-DSPM_ABSL_PROVIDER=module',
           '-DCMAKE_SHARED_LINKER_FLAGS="/OPT:REF /OPT:ICF /LTCG"',
-          '-DCMAKE_INSTALL_PREFIX=build{}\\root'.format(arch),
+          '-DCMAKE_INSTALL_PREFIX=build{}\\root',
       ])
       subprocess.check_call([
           'cmake',
           '--build',
-          'build_{}'.format(arch),
+          'build',
           '--config',
           'Release',
           '--target',
@@ -185,13 +169,12 @@ class build_ext_win(_build_ext):
           '--parallel',
           '8',
       ])
-
-    cflags = ['/std:c++17', '/I..\\build_{}\\root\\include'.format(arch)]
-    libs = [
-        '..\\build_{}\\root\\lib\\sentencepiece.lib'.format(arch),
-        '..\\build_{}\\root\\lib\\sentencepiece_train.lib'.format(arch),
-    ]
-    libs.extend(find_abseil_lib('.\\build_{}\\third_party'.format(arch)))
+      cflags = ['/std:c++17', '/I.\\build\\root\\include']
+      libs = [
+          '.\\build\\root\\lib\\sentencepiece.lib',
+          '.\\build\\root\\lib\\sentencepiece_train.lib',
+      ]
+      libs.extend(find_abseil_lib('.\\build\\third_party'))
 
     # on Windows, GIL flag is not set automatically.
     # https://docs.python.org/3/howto/free-threading-python.html
@@ -229,11 +212,8 @@ def copy_package_data():
       '../data',
   ])
 
-  if not data and is_sentencepiece_installed():
-    data = find_targets(run_pkg_config('datadir'))
-
   for filename in data:
-    print('copying {} -> {}'.format(filename, package_data))
+    print('## copying {} -> {}'.format(filename, package_data))
     shutil.copy(filename, package_data)
 
 
