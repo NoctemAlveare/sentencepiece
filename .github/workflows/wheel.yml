@@ -16,7 +16,6 @@ permissions:
 
 jobs:
   build_wheels:
-    continue-on-error: true
     outputs:
       digests-linux: ${{ steps.hash-linux.outputs.digests }}
       digests-macos: ${{ steps.hash-macos.outputs.digests }}

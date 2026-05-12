@@ -8,4 +8,4 @@ do
   cp -f -R "../${i}" sentencepiece
 done
 
-python3 -m build --sdist
+python -m build --sdist
