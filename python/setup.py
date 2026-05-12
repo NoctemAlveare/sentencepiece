@@ -65,6 +65,18 @@ def is_gil_disabled():
   return sysconfig.get_config_var('Py_GIL_DISABLED')
 
 
+def find_abseil_lib(search_root):
+  absl_libs = []
+  ext = '.lib' if os.name == 'nt' else '.a'
+  for root, dirs, files in os.walk(search_root):
+    for file in files:
+      if file.startswith('libabsl') and file.endswith(ext):
+        full_path = os.path.join(root, file)
+        absl_libs.append(full_path)
+
+  return absl_libs
+
+
 def get_cflags_and_libs(root):
   cflags = ['-std=c++17', '-I' + os.path.join(root, 'include')]
   libs = []
@@ -95,12 +107,19 @@ class build_ext(_build_ext):
         subprocess.check_call(['./build_bundled.sh', __version__])
         cflags, libs = get_cflags_and_libs('./build/root')
 
+    # explictly link abseil libraries.
+    libs.append('-Wl,--start-group')
+    libs.extend(find_abseil_lib('./build'))
+    libs.append('-Wl,--end-group')
+
     # Fix compile on some versions of Mac OSX
     # See: https://github.com/neulab/xnmt/issues/199
     if sys.platform == 'darwin':
       cflags.append('-mmacosx-version-min=10.9')
       # get correct SDK path by xcrun
-      sdk_path = subprocess.check_output(['xcrun', '--show-sdk-path']).decode().strip()
+      sdk_path = (
+          subprocess.check_output(['xcrun', '--show-sdk-path']).decode().strip()
+      )
       libs.extend(['-stdlib=libc++', f'-isysroot{sdk_path}'])
     else:
       if sys.platform == 'aix':
@@ -113,6 +132,10 @@ class build_ext(_build_ext):
       libs.append('-Wl,-Bsymbolic')
     if is_gil_disabled():
       cflags.append('-DPy_GIL_DISABLED')
+
+    libs.append('-Wl,--gc-sections')
+    libs.append('-Wl,--version-script=exports.txt')
+
     print('## cflags={}'.format(' '.join(cflags)))
     print('## libs={}'.format(' '.join(libs)))
     ext.extra_compile_args = cflags
@@ -213,6 +236,9 @@ if os.name == 'nt':
         '.\\build\\root\\lib\\sentencepiece.lib',
         '.\\build\\root\\lib\\sentencepiece_train.lib',
     ]
+
+  # Explicitly link to the abseil lib
+  libs.extend(find_abseil_lib('.\\build'))
 
   # on Windows, GIL flag is not set automatically.
   # https://docs.python.org/3/howto/free-threading-python.html
