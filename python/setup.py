@@ -217,6 +217,8 @@ if os.name == 'nt':
         '-B',
         'build',
         '-DSPM_ENABLE_SHARED=OFF',
+        '-DSPM_ABSL_PROVIDER=module',
+        '-DCMAKE_SHARED_LINKER_FLAGS="/OPT:REF /OPT:ICF /LTCG"',
         '-DCMAKE_INSTALL_PREFIX=build\\root',
     ])
     subprocess.check_call([
