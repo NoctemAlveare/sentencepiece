@@ -81,35 +81,40 @@ class build_ext_unix(_build_ext):
       cflags, libs = get_cflags_and_libs('./build/root')
       abseil_libs = find_abseil_lib('./build/third_party')
 
-    # explictly link abseil libraries.
-    libs.append('-Wl,--start-group')
-    libs.extend(abseil_libs)
-    libs.append('-Wl,--end-group')
-
     # Fix compile on some versions of Mac OSX
     # See: https://github.com/neulab/xnmt/issues/199
     if sys.platform == 'darwin':
+      #  non GNU linker
       cflags.append('-mmacosx-version-min=10.9')
       # get correct SDK path by xcrun
       sdk_path = (
           subprocess.check_output(['xcrun', '--show-sdk-path']).decode().strip()
       )
       libs.extend(['-stdlib=libc++', f'-isysroot{sdk_path}'])
+      libs.extend(abseil_libs)
+      libs.append('-Wl,-dead_strip')
+      libs.append('-Wl,-exported_symbols_list,exports_mac.txt')
     else:
+      # GNU linker
+      libs.append('-Wl,--start-group')
+      libs.extend(abseil_libs)
+      libs.append('-Wl,--end-group')
+      libs.append('-Wl,--gc-sections')
+      libs.append('-Wl,--version-script=exports.txt')
       if sys.platform == 'aix':
         cflags.append('-Wl,-s')
         libs.append('-Wl,-s')
       else:
         cflags.append('-Wl,-strip-all')
         libs.append('-Wl,-strip-all')
+
     if sys.platform == 'linux':
       libs.append('-Wl,-Bsymbolic')
+
     if is_gil_disabled():
       cflags.append('-DPy_GIL_DISABLED')
 
     cflags.append('-Wno-unused-function')
-    libs.append('-Wl,--gc-sections')
-    libs.append('-Wl,--version-script=exports.txt')
 
     print('## cflags={}'.format(' '.join(cflags)))
     print('## libs={}'.format(' '.join(libs)))
@@ -157,7 +162,7 @@ class build_ext_win(_build_ext):
           '-DSPM_ENABLE_SHARED=OFF',
           '-DSPM_ABSL_PROVIDER=module',
           '-DCMAKE_SHARED_LINKER_FLAGS="/OPT:REF /OPT:ICF /LTCG"',
-          '-DCMAKE_INSTALL_PREFIX=build{}\\root',
+          '-DCMAKE_INSTALL_PREFIX=build\\root',
       ])
       subprocess.check_call([
           'cmake',
