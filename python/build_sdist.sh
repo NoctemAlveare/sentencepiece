@@ -2,10 +2,10 @@
 
 mkdir -p sentencepiece
 
-for i in CMakeLists.txt exports.txt LICENSE README.md VERSION.txt cmake config.h.in sentencepiece.pc.in src third_party
+for i in CMakeLists.txt LICENSE README.md VERSION.txt cmake config.h.in sentencepiece.pc.in src third_party
 do
   echo "copying ../${i} sentencepiece/${i}"
   cp -f -R "../${i}" sentencepiece
 done
 
-python -m build --sdist
+python3 -m build --sdist
