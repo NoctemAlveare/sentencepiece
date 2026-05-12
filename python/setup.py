@@ -70,7 +70,9 @@ def find_abseil_lib(search_root):
   ext = '.lib' if os.name == 'nt' else '.a'
   for root, dirs, files in os.walk(search_root):
     for file in files:
-      if file.startswith('libabsl') and file.endswith(ext):
+      if (
+          file.startswith('libabsl') or file.startswith('absl')
+      ) and file.endswith(ext):
         full_path = os.path.join(root, file)
         absl_libs.append(full_path)
 
@@ -190,18 +192,20 @@ def get_win_arch():
 if os.name == 'nt':
   # Must pre-install sentencepice into build directory.
   arch = get_win_arch()
-  if os.path.exists('..\\build\\root_{}\\lib'.format(arch)):
-    cflags = ['/std:c++17', '/I..\\build\\root_{}\\include'.format(arch)]
+  if os.path.exists('..\\build_{}\\root\\lib'.format(arch)):
+    cflags = ['/std:c++17', '/I..\\build_{}\\root\\include'.format(arch)]
     libs = [
-        '..\\build\\root_{}\\lib\\sentencepiece.lib'.format(arch),
-        '..\\build\\root_{}\\lib\\sentencepiece_train.lib'.format(arch),
+        '..\\build_{}\\root\\lib\\sentencepiece.lib'.format(arch),
+        '..\\build_{}\\root\\lib\\sentencepiece_train.lib'.format(arch),
     ]
+    libs.extend(find_abseil_lib('.\\build_{}\\third_party'.format(arch)))
   elif os.path.exists('..\\build\\root\\lib'):
     cflags = ['/std:c++17', '/I..\\build\\root\\include']
     libs = [
         '..\\build\\root\\lib\\sentencepiece.lib',
         '..\\build\\root\\lib\\sentencepiece_train.lib',
     ]
+    libs.extend(find_abseil_lib('.\\build\\third_party'))
   else:
     # build library locally with cmake and vc++.
     cmake_arch = 'Win32'
@@ -233,14 +237,11 @@ if os.name == 'nt':
         '8',
     ])
     cflags = ['/std:c++17', '/I.\\build\\root\\include']
-
     libs = [
         '.\\build\\root\\lib\\sentencepiece.lib',
         '.\\build\\root\\lib\\sentencepiece_train.lib',
     ]
-
-  # Explicitly link to the abseil lib
-  libs.extend(find_abseil_lib('.\\build'))
+    libs.extend(find_abseil_lib('.\\build\\third_party'))
 
   # on Windows, GIL flag is not set automatically.
   # https://docs.python.org/3/howto/free-threading-python.html
