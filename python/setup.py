@@ -107,6 +107,7 @@ class build_ext_unix(_build_ext):
     if is_gil_disabled():
       cflags.append('-DPy_GIL_DISABLED')
 
+    cflags.append('-Wno-unused-function')
     libs.append('-Wl,--gc-sections')
     libs.append('-Wl,--version-script=exports.txt')
 
@@ -131,7 +132,7 @@ class build_ext_win(_build_ext):
           '..\\build_{}\\root\\lib\\sentencepiece_train.lib'.format(arch),
       ]
       libs.extend(find_abseil_lib('..\\build_{}\\third_party'.format(arch)))
-    if os.path.exists('..\\build\\root\\lib'):
+    elif os.path.exists('..\\build\\root\\lib'):
       cflags = ['/std:c++17', '/I..\\build\\root\\include']
       libs = [
           '..\\build\\root\\lib\\sentencepiece.lib',
