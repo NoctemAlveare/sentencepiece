@@ -12,20 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.!
 
-if (SPM_ABSL_PROVIDER STREQUAL "module" OR SPM_ABSL_PROVIDER STREQUAL "package")
-  set(ABSL_FLAGS_SRCS "")
-  set(ABSL_STRINGS_SRCS "")
-  list(APPEND SPM_LIBS absl::strings)
-  list(APPEND SPM_LIBS absl::flags)
-  list(APPEND SPM_LIBS absl::flags_parse)
-  list(APPEND SPM_LIBS absl::log)
-  list(APPEND SPM_LIBS absl::check)
-  add_compile_definitions(_USE_EXTERNAL_ABSL)
-elseif (SPM_ABSL_PROVIDER STREQUAL "internal")
- set(ABSL_FLAGS_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/absl/flags/flag.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/absl/log/log.cc)
-endif()
+list(APPEND SPM_LIBS absl::strings)
+list(APPEND SPM_LIBS absl::flags)
+list(APPEND SPM_LIBS absl::flags_parse)
+list(APPEND SPM_LIBS absl::log)
+list(APPEND SPM_LIBS absl::check)
 
 if (SPM_PROTOBUF_PROVIDER STREQUAL "internal")
   set(SPM_PROTO_HDRS builtin_pb/sentencepiece.pb.h)
@@ -111,9 +102,7 @@ set(SPM_SRCS
   sentencepiece_processor.cc
   unigram_model.cc
   util.cc
-  word_model.cc
-  ${ABSL_STRINGS_SRCS}
-  ${ABSL_FLAGS_SRCS})
+  word_model.cc)
 
 set(SPM_TRAIN_SRCS
   ${SPM_PROTO_HDRS}
@@ -151,7 +140,6 @@ set(SPM_TEST_SRCS
   char_model_test.cc
   char_model_trainer_test.cc
   filesystem_test.cc
-  init_test.cc
   model_factory_test.cc
   model_interface_test.cc
   normalizer_test.cc
