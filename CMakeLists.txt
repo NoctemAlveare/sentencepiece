@@ -192,16 +192,21 @@ if (SPM_ABSL_PROVIDER STREQUAL "module")
         GIT_PROGRESS TRUE
         GIT_TAG 20260107.1)
   add_subdirectory(third_party/abseil-cpp)
-  file(CREATE_LINK
-       ${CMAKE_CURRENT_SOURCE_DIR}/third_party/abseil-cpp/absl
-       ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl
-       SYMBOLIC)
+  if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl)
+    file(CREATE_LINK
+         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/abseil-cpp/absl
+         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl
+         SYMBOLIC)
+  endif()
 elseif (SPM_ABSL_PROVIDER STREQUAL "package")
   find_package(absl REQUIRED)
   get_target_property(ABSL_INCLUDE_DIRS absl::base INTERFACE_INCLUDE_DIRECTORIES)
-  file(CREATE_LINK
-       ${ABSL_INCLUDE_DIRS}/absl ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl
-       SYMBOLIC)
+  if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl)
+    file(CREATE_LINK
+         ${ABSL_INCLUDE_DIRS}/absl
+         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/absl
+         SYMBOLIC)
+  endif()
   include_directories(${ABSL_INCLUDE_DIRS})
 endif()
 
