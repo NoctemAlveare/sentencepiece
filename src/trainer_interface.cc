@@ -604,7 +604,7 @@ void TrainerInterface::SplitSentencesByWhitespace() {
     for (const auto &w :
          SplitIntoWords(s.first, trainer_spec_.treat_whitespace_as_suffix(),
                         trainer_spec_.allow_whitespace_only_pieces())) {
-      tokens[std::string(w)] += s.second;
+      tokens[w] += s.second;
     }
   }
   sentences_ = Sorted(tokens);

@@ -223,7 +223,7 @@ int PieceToByte(absl::string_view piece) {
     }
     return m;
   }();
-  const auto it = kMap->find(std::string(piece));
+  const auto it = kMap->find(piece);
   if (it == kMap->end()) {
     return -1;
   } else {

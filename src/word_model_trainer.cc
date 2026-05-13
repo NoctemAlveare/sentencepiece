@@ -35,7 +35,7 @@ util::Status Trainer::Train() {
   absl::flat_hash_map<std::string, uint64_t> freq;
   for (const auto &it : sentences_) {
     for (const auto &s : SplitIntoWords(it.first)) {
-      freq[std::string(s)] += it.second;
+      freq[s] += it.second;
     }
   }
 

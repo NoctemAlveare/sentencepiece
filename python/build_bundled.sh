@@ -22,7 +22,6 @@ cmake ${SRC_DIR} -B ${BUILD_DIR} \
   -DSPM_ENABLE_SHARED=OFF \
   -DSPM_DISABLE_EMBEDDED_DATA=ON \
   -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} \
-  -DSPM_ABSL_PROVIDER=module \
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
   -DCMAKE_CXX_FLAGS="-fPIC -fvisibility=default -ffunction-sections -fdata-sections"
 cmake --build ${BUILD_DIR} --config Release --target install --parallel $(nproc)
