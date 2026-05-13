@@ -101,9 +101,9 @@ NormalizerSpec SentencePieceTrainer::GetNormalizerSpec(absl::string_view name) {
 util::Status SentencePieceTrainer::MergeSpecsFromArgs(
     absl::string_view args, TrainerSpec *trainer_spec,
     NormalizerSpec *normalizer_spec, NormalizerSpec *denormalizer_spec) {
-  CHECK_OR_RETURN(trainer_spec) << "`trainer_spec` must not be null.";
-  CHECK_OR_RETURN(normalizer_spec) << "`normalizer_spec` must not be null.";
-  CHECK_OR_RETURN(denormalizer_spec) << "`denormalizer_spec` must not be null.";
+  RET_CHECK(trainer_spec) << "`trainer_spec` must not be null.";
+  RET_CHECK(normalizer_spec) << "`normalizer_spec` must not be null.";
+  RET_CHECK(denormalizer_spec) << "`denormalizer_spec` must not be null.";
 
   if (args.empty()) return util::OkStatus();
 
@@ -130,9 +130,9 @@ util::Status SentencePieceTrainer::MergeSpecsFromArgs(
     const std::unordered_map<std::string, std::string> &kwargs,
     TrainerSpec *trainer_spec, NormalizerSpec *normalizer_spec,
     NormalizerSpec *denormalizer_spec) {
-  CHECK_OR_RETURN(trainer_spec) << "`trainer_spec` must not be null.";
-  CHECK_OR_RETURN(normalizer_spec) << "`normalizer_spec` must not be null.";
-  CHECK_OR_RETURN(denormalizer_spec) << "`denormalizer_spec` must not be null.";
+  RET_CHECK(trainer_spec) << "`trainer_spec` must not be null.";
+  RET_CHECK(normalizer_spec) << "`normalizer_spec` must not be null.";
+  RET_CHECK(denormalizer_spec) << "`denormalizer_spec` must not be null.";
 
   for (const auto &it : kwargs) {
     const auto &key = it.first;
@@ -149,7 +149,7 @@ util::Status SentencePieceTrainer::MergeSpecsFromArgs(
       continue;
     } else if (key == "minloglevel") {
       int v = 0;
-      CHECK_OR_RETURN(absl::SimpleAtoi(value, &v));
+      RET_CHECK(absl::SimpleAtoi(value, &v));
       SetMinLogLevel(v);
       continue;
     }
@@ -235,10 +235,10 @@ util::Status SentencePieceTrainer::Train(
 // static
 util::Status SentencePieceTrainer::PopulateNormalizerSpec(
     NormalizerSpec *normalizer_spec, bool is_denormalizer) {
-  CHECK_OR_RETURN(normalizer_spec);
+  RET_CHECK(normalizer_spec);
 
   if (!normalizer_spec->normalization_rule_tsv().empty()) {
-    CHECK_OR_RETURN(normalizer_spec->precompiled_charsmap().empty())
+    RET_CHECK(normalizer_spec->precompiled_charsmap().empty())
         << "precompiled_charsmap is already defined.";
     normalizer::Builder::CharsMap chars_map;
     RETURN_IF_ERROR(normalizer::Builder::LoadCharsMap(
@@ -303,7 +303,7 @@ util::Status SentencePieceNormalizer::Load(
   model_proto_ = std::move(model_proto);
   normalizer_ =
       std::make_unique<normalizer::Normalizer>(model_proto_->normalizer_spec());
-  CHECK_OR_RETURN(normalizer_);
+  RET_CHECK(normalizer_);
   return normalizer_->status();
 }
 
@@ -316,7 +316,7 @@ util::Status SentencePieceNormalizer::Load(absl::string_view filename) {
 util::Status SentencePieceNormalizer::LoadFromSerializedProto(
     absl::string_view serialized) {
   auto model_proto = std::make_unique<ModelProto>();
-  CHECK_OR_RETURN(
+  RET_CHECK(
       model_proto->ParseFromArray(serialized.data(), serialized.size()));
   return Load(std::move(model_proto));
 }
@@ -340,7 +340,7 @@ util::Status SentencePieceNormalizer::LoadFromRuleName(absl::string_view name) {
 
 util::Status SentencePieceNormalizer::Normalize(absl::string_view input,
                                                 std::string *normalized) const {
-  CHECK_OR_RETURN(normalizer_);
+  RET_CHECK(normalizer_);
   std::vector<size_t> norm_to_orig;
   return normalizer_->Normalize(input, normalized, &norm_to_orig);
 }
@@ -348,7 +348,7 @@ util::Status SentencePieceNormalizer::Normalize(absl::string_view input,
 util::Status SentencePieceNormalizer::Normalize(
     absl::string_view input, std::string *normalized,
     std::vector<size_t> *norm_to_orig) const {
-  CHECK_OR_RETURN(normalizer_);
+  RET_CHECK(normalizer_);
   return normalizer_->Normalize(input, normalized, norm_to_orig);
 }
 

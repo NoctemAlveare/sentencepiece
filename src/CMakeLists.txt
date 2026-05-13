@@ -16,6 +16,7 @@ list(APPEND SPM_LIBS absl::strings)
 list(APPEND SPM_LIBS absl::flags)
 list(APPEND SPM_LIBS absl::flags_parse)
 list(APPEND SPM_LIBS absl::log)
+list(APPEND SPM_LIBS absl::log_initialize)
 list(APPEND SPM_LIBS absl::check)
 
 if (SPM_PROTOBUF_PROVIDER STREQUAL "internal")

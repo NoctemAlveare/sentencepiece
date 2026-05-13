@@ -148,7 +148,7 @@ util::Status TrainerModel::SetSentencePieces(SentencePieces &&sentencepieces) {
   for (size_t i = 0; i < sentencepieces_.size(); ++i) {
     const absl::string_view w = sentencepieces_[i].first;  // piece
     const float score = sentencepieces_[i].second;         // score.
-    CHECK_OR_RETURN(!std::isnan(score));
+    RET_CHECK(!std::isnan(score));
     pieces.emplace_back(w, i);
     min_score_ = std::min(min_score_, score);
     auto *piece = model_proto_data_.add_pieces();
@@ -607,17 +607,17 @@ TrainerModel::SentencePieces Trainer::FinalizeSentencePieces(
 util::Status Trainer::Train() {
   RETURN_IF_ERROR(status());
 
-  CHECK_EQ_OR_RETURN(TrainerSpec::UNIGRAM, trainer_spec_.model_type());
-  CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
+  RET_CHECK_EQ(TrainerSpec::UNIGRAM, trainer_spec_.model_type());
+  RET_CHECK(normalizer_spec_.escape_whitespaces());
 
   TrainerModel model(trainer_spec_, normalizer_spec_);
 
   RETURN_IF_ERROR(model.status());
   RETURN_IF_ERROR(LoadSentences());
-  CHECK_OR_RETURN(!required_chars_.empty());
+  RET_CHECK(!required_chars_.empty());
 
   auto seed_sentencepieces = MakeSeedSentencePieces();
-  CHECK_OR_RETURN(!seed_sentencepieces.empty());
+  RET_CHECK(!seed_sentencepieces.empty());
 
   RETURN_IF_ERROR(model.SetSentencePieces(std::move(seed_sentencepieces)));
 

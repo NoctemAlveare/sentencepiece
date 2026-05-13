@@ -16,7 +16,6 @@
 
 #include <atomic>
 #include <cstddef>
-#include <iostream>
 #include <memory>
 
 namespace sentencepiece {
@@ -206,9 +205,7 @@ std::string StrError(int errnum) {
   strerror_r(errnum, buffer, kStrErrorSize - 1);
   str = buffer;
 #endif
-  std::ostringstream os;
-  os << str << " Error #" << errnum;
-  return os.str();
+  return absl::StrCat(str, " Error #", errnum);
 }
 
 std::vector<std::string> StrSplitAsCSV(absl::string_view text) {

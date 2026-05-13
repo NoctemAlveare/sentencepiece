@@ -38,8 +38,6 @@
 
 using char32 = uint32_t;
 
-static constexpr uint32_t kUnicodeError = 0xFFFD;
-
 #define FRIEND_TEST(a, b) friend class a##_Test_##b;
 
 #define RETURN_IF_ERROR(expr)          \

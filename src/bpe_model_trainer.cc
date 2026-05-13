@@ -181,8 +181,8 @@ util::Status Trainer::Train() {
   }
 #endif  // SPM_NLCODEC_BPE
 
-  CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
-  CHECK_EQ_OR_RETURN(TrainerSpec::BPE, trainer_spec_.model_type());
+  RET_CHECK(normalizer_spec_.escape_whitespaces());
+  RET_CHECK_EQ(TrainerSpec::BPE, trainer_spec_.model_type());
 
   symbols_.clear();
   allocated_.clear();
@@ -231,7 +231,7 @@ util::Status Trainer::Train() {
 
   const int vocab_size =
       trainer_spec_.vocab_size() - meta_pieces_.size() - required_chars_.size();
-  CHECK_GE_OR_RETURN(vocab_size, 0);
+  RET_CHECK_GE(vocab_size, 0);
 
   // We may see duplicated pieces that are extracted with different path.
   // In real segmentation phase, we can consider them as one symbol.
@@ -239,7 +239,7 @@ util::Status Trainer::Train() {
   absl::flat_hash_set<std::string> dup;
 
   // Main loop.
-  CHECK_OR_RETURN(final_pieces_.empty());
+  RET_CHECK(final_pieces_.empty());
   while (final_pieces_.size() < static_cast<size_t>(vocab_size)) {
     constexpr int kUpdateActiveSymbolsInteval = 100;
     if (final_pieces_.size() % kUpdateActiveSymbolsInteval == 0) {
@@ -298,7 +298,7 @@ util::Status Trainer::Train() {
         // when left_symbol == right_symbol.
         continue;
       }
-      CHECK_OR_RETURN(symbols_[pos.sid][pos.right]);
+      RET_CHECK(symbols_[pos.sid][pos.right]);
 
       // We have three bigrams [prev, left], [left, right], [right, next],
       // which are affected with this symbol replacement.
@@ -337,8 +337,8 @@ util::Status Trainer::Train() {
 
 #ifdef SPM_NLCODEC_BPE
 util::Status Trainer::TrainFast() {
-  CHECK_OR_RETURN(normalizer_spec_.escape_whitespaces());
-  CHECK_EQ_OR_RETURN(TrainerSpec::BPE, trainer_spec_.model_type());
+  RET_CHECK(normalizer_spec_.escape_whitespaces());
+  RET_CHECK_EQ(TrainerSpec::BPE, trainer_spec_.model_type());
 
   RETURN_IF_ERROR(LoadSentences());
 
@@ -348,8 +348,8 @@ util::Status Trainer::TrainFast() {
 
   const int vocab_size =
       trainer_spec_.vocab_size() - meta_pieces_.size() - required_chars_.size();
-  CHECK_GE_OR_RETURN(vocab_size, 0);
-  CHECK_OR_RETURN(final_pieces_.empty());
+  RET_CHECK_GE(vocab_size, 0);
+  RET_CHECK(final_pieces_.empty());
 
   RETURN_IF_ERROR(
       nlcodec::RunFastBPEMerges(sentences_, vocab_size, &final_pieces_,

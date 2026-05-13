@@ -171,7 +171,7 @@ util::Status Normalizer::Normalize(absl::string_view input,
         spec_->escape_whitespaces() ? kSpaceSymbol : " ";
     while (absl::EndsWith(*normalized, space)) {
       const int length = normalized->size() - space.size();
-      CHECK_GE_OR_RETURN(length, 0);
+      RET_CHECK_GE(length, 0);
       consumed = (*norm_to_orig)[length];
       normalized->resize(length);
       norm_to_orig->resize(length);
@@ -183,7 +183,7 @@ util::Status Normalizer::Normalize(absl::string_view input,
 
   norm_to_orig->push_back(consumed);
 
-  CHECK_EQ_OR_RETURN(norm_to_orig->size(), normalized->size() + 1);
+  RET_CHECK_EQ(norm_to_orig->size(), normalized->size() + 1);
 
   return util::OkStatus();
 }
@@ -302,7 +302,7 @@ util::Status Normalizer::DecodePrecompiledCharsMap(
   blob.remove_prefix(sizeof(trie_blob_size));
 
   if constexpr (util::is_bigendian()) {
-    CHECK_OR_RETURN(buffer);
+    RET_CHECK(buffer);
     buffer->assign(blob.data(), trie_blob_size);
     uint32_t *data =
         reinterpret_cast<uint32_t *>(const_cast<char *>(buffer->data()));
