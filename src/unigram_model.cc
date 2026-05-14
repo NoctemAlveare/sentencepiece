@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "third_party/absl/container/flat_hash_map.h"
+#include "third_party/absl/random/random.h"
 #include "third_party/absl/strings/str_split.h"
 #include "third_party/absl/strings/string_view.h"
 #include "util.h"

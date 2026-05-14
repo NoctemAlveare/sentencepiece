@@ -23,6 +23,7 @@
 
 #include "freelist.h"
 #include "third_party/absl/container/flat_hash_map.h"
+#include "third_party/absl/random/random.h"
 #include "util.h"
 
 namespace sentencepiece {
@@ -129,7 +130,7 @@ std::vector<std::pair<absl::string_view, int>> Model::SampleEncode(
   }
 
   // BPE-dropout: https://arxiv.org/pdf/1910.13267.pdf
-  std::mt19937 *rand_gen = nullptr;
+  absl::BitGen *rand_gen = nullptr;
   auto skip_merge = [&]() {
     if (alpha <= 0.0) return false;
     if (alpha >= 1.0) return true;

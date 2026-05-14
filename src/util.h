@@ -32,6 +32,7 @@
 #include "config.h"
 #include "sentencepiece_processor.h"
 #include "third_party/absl/numeric/bits.h"
+#include "third_party/absl/random/random.h"
 #include "third_party/absl/strings/ascii.h"
 #include "third_party/absl/strings/numbers.h"
 #include "third_party/absl/strings/str_cat.h"
@@ -63,6 +64,8 @@ namespace string_util {
 
 template <typename T>
 inline bool DecodePOD(absl::string_view str, T *result) {
+  static_assert(std::is_trivially_copyable<T>::value,
+                "T must be trivially copyable");
   if (sizeof(*result) != str.size()) {
     return false;
   }
@@ -72,6 +75,8 @@ inline bool DecodePOD(absl::string_view str, T *result) {
 
 template <typename T>
 inline std::string EncodePOD(const T &value) {
+  static_assert(std::is_trivially_copyable<T>::value,
+                "T must be trivially copyable");
   return std::string(reinterpret_cast<const char *>(&value), sizeof(T));
 }
 
@@ -233,16 +238,16 @@ inline uint64_t FingerprintCat(uint64_t x, uint64_t y) {
 
 namespace random {
 
-std::mt19937 *GetRandomGenerator();
+absl::BitGen *GetRandomGenerator();
 
 template <typename T>
 class ReservoirSampler {
  public:
   explicit ReservoirSampler(std::vector<T> *sampled, uint64_t size)
-      : sampled_(sampled), size_(size), engine_(GetRandomGeneratorSeed()) {}
+      : sampled_(sampled), size_(size) {}
   explicit ReservoirSampler(std::vector<T> *sampled, uint64_t size,
                             uint64_t seed)
-      : sampled_(sampled), size_(size), engine_(seed) {}
+      : sampled_(sampled), size_(size), gen_(std::seed_seq{seed}) {}
   virtual ~ReservoirSampler() {}
 
   void Add(const T &item) {
@@ -252,8 +257,7 @@ class ReservoirSampler {
     if (sampled_->size() < size_) {
       sampled_->push_back(item);
     } else {
-      std::uniform_int_distribution<uint64_t> dist(0, total_ - 1);
-      const uint64_t n = dist(engine_);
+      const auto n = absl::Uniform<uint64_t>(gen_, 0, total_ - 1);
       if (n < sampled_->size()) (*sampled_)[n] = item;
     }
   }
@@ -264,7 +268,7 @@ class ReservoirSampler {
   std::vector<T> *sampled_ = nullptr;
   uint64_t size_ = 0;
   uint64_t total_ = 0;
-  std::mt19937 engine_;
+  absl::BitGen gen_;
 };
 
 }  // namespace random

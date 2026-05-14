@@ -30,6 +30,7 @@
 #include "sentencepiece_processor.h"
 #include "sentencepiece_trainer.h"
 #include "third_party/absl/container/flat_hash_map.h"
+#include "third_party/absl/random/random.h"
 #include "third_party/absl/strings/numbers.h"
 #include "third_party/absl/strings/str_cat.h"
 #include "third_party/absl/strings/str_format.h"
@@ -77,7 +78,7 @@ util::Status VerifySpec(const TrainerSpec &trainer_spec) {
 #undef CHECK_RANGE
 
   RET_CHECK(trainer_spec.input_sentence_size() <= 0 ||
-                  trainer_spec.input_sentence_size() > 100);
+            trainer_spec.input_sentence_size() > 100);
 
   RET_CHECK(!trainer_spec.unk_piece().empty());
   RET_CHECK(!trainer_spec.bos_piece().empty());
@@ -87,7 +88,7 @@ util::Status VerifySpec(const TrainerSpec &trainer_spec) {
   if (SentencePieceTrainer::GetPretokenizerForTraining() ||
       !trainer_spec.pretokenization_delimiter().empty()) {
     RET_CHECK(trainer_spec.model_type() == TrainerSpec::UNIGRAM ||
-                    trainer_spec.model_type() == TrainerSpec::BPE)
+              trainer_spec.model_type() == TrainerSpec::BPE)
         << "PretokenizerForTraining is only supported in UNIGRAM or BPE mode.";
   }
 
@@ -307,7 +308,7 @@ bool TrainerInterface::IsValidSentencePiece(
 }
 
 template <typename T>
-void AddDPNoise(const TrainerSpec &trainer_spec, std::mt19937 *generator,
+void AddDPNoise(const TrainerSpec &trainer_spec, absl::BitGen *generator,
                 T *to_update) {
   if (trainer_spec.differential_privacy_noise_level() > 0) {
     std::normal_distribution<float> dist(
@@ -327,13 +328,12 @@ util::Status TrainerInterface::LoadSentences() {
   RET_CHECK(sentences_.empty());
   RET_CHECK(required_chars_.empty());
   RET_CHECK(trainer_spec_.input_format().empty() ||
-                  trainer_spec_.input_format() == "text" ||
-                  trainer_spec_.input_format() == "tsv")
+            trainer_spec_.input_format() == "text" ||
+            trainer_spec_.input_format() == "tsv")
       << "Supported formats are 'text' and 'tsv'.";
 
-  RET_CHECK(
-      (sentence_iterator_ != nullptr && trainer_spec_.input().empty()) ||
-      (sentence_iterator_ == nullptr && !trainer_spec_.input().empty()))
+  RET_CHECK((sentence_iterator_ != nullptr && trainer_spec_.input().empty()) ||
+            (sentence_iterator_ == nullptr && !trainer_spec_.input().empty()))
       << "SentenceIterator and trainer_spec.input() must be exclusive.";
 
   RET_CHECK(
@@ -487,7 +487,7 @@ END:
           auto *generator = random::GetRandomGenerator();
           for (size_t i = n; i < sentences_.size(); i += num_workers) {
             AddDPNoise<int64_t>(trainer_spec_, generator,
-                              &(sentences_[i].second));
+                                &(sentences_[i].second));
           }
         });
       }
@@ -581,9 +581,8 @@ END:
 
   if (trainer_spec_.model_type() != TrainerSpec::WORD &&
       trainer_spec_.model_type() != TrainerSpec::CHAR) {
-    RET_CHECK_LE(
-        static_cast<int>(required_chars_.size() + meta_pieces_.size()),
-        trainer_spec_.vocab_size())
+    RET_CHECK_LE(static_cast<int>(required_chars_.size() + meta_pieces_.size()),
+                 trainer_spec_.vocab_size())
         << "Vocabulary size is smaller than required_chars. "
         << trainer_spec_.vocab_size() << " vs "
         << required_chars_.size() + meta_pieces_.size() << ". "
@@ -619,7 +618,7 @@ util::Status TrainerInterface::Serialize(ModelProto *model_proto) const {
 
   model_proto->Clear();
 
-#define CHECK_PIECE(piece)                                  \
+#define CHECK_PIECE(piece)                            \
   RET_CHECK(string_util::IsStructurallyValid(piece)); \
   RET_CHECK(!piece.empty());                          \
   RET_CHECK(dup.insert(piece).second) << piece << " is already defined";
@@ -656,8 +655,7 @@ util::Status TrainerInterface::Serialize(ModelProto *model_proto) const {
   if (!trainer_spec_.hard_vocab_limit() ||
       trainer_spec_.model_type() == TrainerSpec::CHAR) {
     RET_CHECK_GE(trainer_spec_.vocab_size(), model_proto->pieces_size());
-    RET_CHECK_GE(trainer_spec_.vocab_size(),
-                       static_cast<int32_t>(dup.size()));
+    RET_CHECK_GE(trainer_spec_.vocab_size(), static_cast<int32_t>(dup.size()));
     model_proto->mutable_trainer_spec()->set_vocab_size(
         model_proto->pieces_size());
   } else {
@@ -665,8 +663,7 @@ util::Status TrainerInterface::Serialize(ModelProto *model_proto) const {
         << absl::StrFormat(
                "Vocabulary size too high (%d). Please set it to a value <= %d.",
                trainer_spec_.vocab_size(), model_proto->pieces_size());
-    RET_CHECK_EQ(trainer_spec_.vocab_size(),
-                       static_cast<int32_t>(dup.size()));
+    RET_CHECK_EQ(trainer_spec_.vocab_size(), static_cast<int32_t>(dup.size()));
   }
 
   // Saves self-testing data.

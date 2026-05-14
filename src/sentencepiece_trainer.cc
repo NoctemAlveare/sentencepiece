@@ -316,8 +316,7 @@ util::Status SentencePieceNormalizer::Load(absl::string_view filename) {
 util::Status SentencePieceNormalizer::LoadFromSerializedProto(
     absl::string_view serialized) {
   auto model_proto = std::make_unique<ModelProto>();
-  RET_CHECK(
-      model_proto->ParseFromArray(serialized.data(), serialized.size()));
+  RET_CHECK(model_proto->ParseFromArray(serialized.data(), serialized.size()));
   return Load(std::move(model_proto));
 }
 

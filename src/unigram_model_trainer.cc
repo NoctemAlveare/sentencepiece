@@ -123,7 +123,7 @@ class BoundedPriorityQueue {
   }
 
   size_t max_capacity_;
-  std::unordered_map<std::string, int64_t> data_;
+  absl::flat_hash_map<std::string, int64_t> data_;
 };
 }  // namespace
 
